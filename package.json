@@ -1,0 +1,24 @@
+{
+  "name": "live-dom-sync",
+  "version": "1.0.0",
+  "description": "Real-time DOM manipulation with source file synchronization",
+  "type": "module",
+  "main": "live-dom-sync.js",
+  "scripts": {
+    "server": "node server.js",
+    "server:slow": "node server.js --reload-debounce 5000",
+    "test": "node test-runner.js",
+    "validate": "node test-runner.js"
+  },
+  "keywords": [
+    "dom",
+    "live-editing",
+    "hot-reload",
+    "websocket"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

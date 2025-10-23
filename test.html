@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LiveDOMSync Test</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    .hero {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 60px 40px;
+      border-radius: 12px;
+      margin-bottom: 40px;
+    }
+    
+    .hero h1 {
+      margin: 0 0 16px 0;
+      font-size: 48px;
+    }
+    
+    .hero p {
+      margin: 0;
+      font-size: 20px;
+      opacity: 0.9;
+    }
+    
+    .card {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    
+    .card h2 {
+      margin: 0 0 12px 0;
+      color: #1f2937;
+    }
+    
+    .card p {
+      margin: 0;
+      color: #6b7280;
+    }
+    
+    .button {
+      display: inline-block;
+      background: #3b82f6;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    
+    .button:hover {
+      background: #2563eb;
+    }
+    
+    .status {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      font-size: 14px;
+    }
+    
+    .status.connected {
+      border-color: #10b981;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      margin-right: 8px;
+    }
+    
+    .status.connected .status-indicator {
+      background: #10b981;
+    }
+    
+    .instructions {
+      background: #f3f4f6;
+      border-left: 4px solid #3b82f6;
+      padding: 20px;
+      border-radius: 4px;
+      margin: 30px 0;
+    }
+    
+    .instructions h3 {
+      margin: 0 0 12px 0;
+    }
+    
+    .instructions ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+    
+    .instructions li {
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <h1>LiveDOMSync Test Page</h1>
+    <p>Edit this page in real-time and watch changes sync to source files</p>
+  </div>
+
+  <div class="instructions">
+    <h3>🚀 How to use:</h3>
+    <ol>
+      <li>Make sure the WebSocket server is running</li>
+      <li>Start editing any text on this page</li>
+      <li>Changes are automatically saved to <code>dom-state.json</code></li>
+      <li>Edit the JSON file externally - the page will reload automatically</li>
+      <li>Check the browser console for sync logs</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>Feature 1: Real-time Sync</h2>
+    <p>All changes you make are automatically synced to your source files with a 300ms debounce. No manual save needed.</p>
+  </div>
+
+  <div class="card">
+    <h2>Feature 2: Bidirectional Updates</h2>
+    <p>Edit the JSON file in your text editor and watch the browser reload automatically. Perfect for integrating with AI tools.</p>
+  </div>
+
+  <div class="card">
+    <h2>Feature 3: Element Tracking</h2>
+    <p>Each element gets a unique ID so changes are tracked precisely. Try changing this text, colors, or layout!</p>
+  </div>
+
+  <a href="#" class="button">Click me (I'm editable too!)</a>
+
+  <div class="status" id="status">
+    <span class="status-indicator"></span>
+    <span id="status-text">Connecting to sync server...</span>
+  </div>
+
+  <script type="module">
+    import { LiveDOMSync } from './live-dom-sync.js?v=2';
+
+    // Initialize sync
+    const sync = new LiveDOMSync({
+      wsUrl: 'ws://localhost:3001',
+      sourceFile: 'dom-state.json',
+      debounceMs: 300
+    });
+
+    const statusEl = document.getElementById('status');
+    const statusText = document.getElementById('status-text');
+
+    // Connect and enable
+    sync.connect()
+      .then(() => {
+        statusEl.classList.add('connected');
+        statusText.textContent = 'Connected - Live editing enabled';
+        
+        sync.enable();
+        
+        console.log('%c🎨 LiveDOMSync Ready!', 'color: #10b981; font-size: 16px; font-weight: bold');
+        console.log('Try editing any text on this page.');
+        console.log('Changes will be synced to: src/.live-dom/dom-state.json');
+      })
+      .catch(err => {
+        statusText.textContent = 'Connection failed - Check server';
+        console.error('Failed to connect:', err);
+      });
+
+    // Expose for debugging
+    window.liveDOMSync = sync;
+    
+    // Add keyboard shortcut to force sync (Cmd/Ctrl + S)
+    document.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        console.log('Forcing sync...');
+        sync.forceSync();
+      }
+    });
+  </script>
+</body>
+</html>
