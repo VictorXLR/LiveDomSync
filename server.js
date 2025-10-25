@@ -18,6 +18,7 @@ import { readFile, writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { HTMLSyncer } from './sync.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -31,6 +32,7 @@ class LiveDOMSyncServer {
     this.lastStates = new Map(); // Track last known state per file
     this.reloadDebounceMs = options.reloadDebounceMs || 3000; // Default 3 seconds
     this.reloadTimers = new Map(); // Track debounce timers per file
+    this.syncer = new HTMLSyncer(); // HTML syncer instance
   }
 
   async start() {
@@ -85,6 +87,10 @@ class LiveDOMSyncServer {
 
       case 'SYNC_STATE':
         await this.handleSyncState(ws, message);
+        break;
+
+      case 'SYNC_TO_SOURCE':
+        await this.handleSyncToSource(ws, message);
         break;
 
       default:
@@ -163,6 +169,58 @@ class LiveDOMSyncServer {
     }
   }
 
+  async handleSyncToSource(ws, message) {
+    const { sourceFile, htmlFile } = message;
+
+    if (!sourceFile || !htmlFile) {
+      this.sendError(ws, 'SYNC_TO_SOURCE requires sourceFile and htmlFile parameters');
+      return;
+    }
+
+    try {
+      const stateFilePath = this.getStateFilePath(sourceFile);
+      const htmlFilePath = join(process.cwd(), htmlFile);
+
+      // Validate files exist
+      if (!existsSync(stateFilePath)) {
+        throw new Error(`State file not found: ${stateFilePath}`);
+      }
+
+      if (!existsSync(htmlFilePath)) {
+        throw new Error(`HTML file not found: ${htmlFilePath}`);
+      }
+
+      console.log(`[Server] Syncing state to source file...`);
+      console.log(`[Server] - State: ${stateFilePath}`);
+      console.log(`[Server] - HTML: ${htmlFilePath}`);
+
+      // Perform sync
+      const result = await this.syncer.sync(htmlFilePath, stateFilePath);
+
+      console.log(`[Server] ✓ Synced ${result.updated} elements to ${htmlFilePath}`);
+
+      // Send confirmation
+      ws.send(JSON.stringify({
+        type: 'SYNC_TO_SOURCE_COMPLETE',
+        htmlFile,
+        updated: result.updated,
+        errors: result.errors,
+        timestamp: Date.now()
+      }));
+
+      // Broadcast to other clients
+      this.broadcast({
+        type: 'SOURCE_FILE_UPDATED',
+        htmlFile,
+        timestamp: Date.now()
+      });
+
+    } catch (err) {
+      console.error('[Server] Error syncing to source:', err);
+      this.sendError(ws, `Failed to sync to source: ${err.message}`);
+    }
+  }
+
   watchStateFile(stateFile) {
     // Don't create duplicate watchers
     if (this.fileWatchers.has(stateFile)) return;
@@ -173,17 +231,17 @@ class LiveDOMSyncServer {
           // Read the new content
           const newContent = await readFile(stateFile, 'utf-8');
           const lastContent = this.lastStates.get(stateFile);
-          
+
           // Only notify if content actually changed (avoid feedback loop)
           if (newContent !== lastContent) {
             console.log(`[Server] External change detected in ${stateFile}`);
             this.lastStates.set(stateFile, newContent);
-            
+
             // Clear any existing timer for this file
             if (this.reloadTimers.has(stateFile)) {
               clearTimeout(this.reloadTimers.get(stateFile));
             }
-            
+
             // Debounce the reload notification
             const timer = setTimeout(() => {
               console.log(`[Server] Notifying clients to reload (after ${this.reloadDebounceMs}ms debounce)`);
@@ -194,7 +252,7 @@ class LiveDOMSyncServer {
               });
               this.reloadTimers.delete(stateFile);
             }, this.reloadDebounceMs);
-            
+
             this.reloadTimers.set(stateFile, timer);
           }
         } catch (err) {

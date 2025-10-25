@@ -7,6 +7,7 @@
   "scripts": {
     "server": "node server.js",
     "server:slow": "node server.js --reload-debounce 5000",
+    "sync": "node sync.js",
     "test": "node test-runner.js",
     "validate": "node test-runner.js"
   },

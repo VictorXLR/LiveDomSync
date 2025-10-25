@@ -9,6 +9,7 @@ Edit your UI directly in the browser and have changes automatically sync to sour
 - **Live DOM Editing**: Content-editable mode with visual feedback
 - **Real-time Sync**: Changes automatically saved to JSON files (300ms debounce)
 - **Bidirectional Updates**: Edit files externally → browser auto-reloads
+- **Source File Sync**: Apply DOM changes back to HTML source files with `sync` command
 - **Element Tracking**: Unique IDs for precise change tracking
 - **WebSocket Communication**: Instant sync between browser and file system
 - **VCS-Friendly**: Clean JSON diffs for version control
@@ -59,6 +60,18 @@ You should see:
 2. **Watch the console** - you'll see sync logs
 3. **Check `src/.live-dom/dom-state.json`** - your changes are saved!
 4. **Edit the JSON file** - browser reloads automatically
+
+### 6. Sync Changes Back to Source Files
+
+Apply your DOM changes back to the original HTML files:
+
+```bash
+npm run sync test.html src/.live-dom/dom-state.json
+```
+
+This updates your source HTML with all the changes you made in the browser!
+
+See [SYNC.md](./SYNC.md) for detailed sync documentation.
 
 ## 📖 Integration Guide
 
@@ -214,11 +227,13 @@ Skip the code-save-reload cycle. Edit directly in browser, changes persist to so
 ### 2. Designer Handoff
 Designers can tweak the real UI without touching code. Developers get clean JSON diffs.
 
-### 3. VLM Integration (Coming Soon)
-Feed the state JSON to VLMs for:
-- "Make this more spacious" → AI adjusts spacing
-- "Match this screenshot" → AI generates changes
-- "Add a dark mode toggle" → AI creates variant
+### 3. VLM Integration
+Feed the state JSON to VLMs for AI-assisted editing:
+- "Make this more spacious" → AI adjusts spacing in JSON → sync to HTML
+- "Match this screenshot" → AI generates changes → sync to HTML
+- "Add a dark mode toggle" → AI creates variant → sync to HTML
+
+See [VLM_INTEGRATION.md](./VLM_INTEGRATION.md) and [SYNC.md](./SYNC.md) for details.
 
 ### 4. A/B Testing
 Quickly create variations by editing the JSON file:
